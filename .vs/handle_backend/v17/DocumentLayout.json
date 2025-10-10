@@ -1,0 +1,71 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\handle_backend\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|d:\\handle_backend\\handle_backend\\services\\handlexml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|solutionrelative:handle_backend\\services\\handlexml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|d:\\handle_backend\\handle_backend\\handle_backend.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|solutionrelative:handle_backend\\handle_backend.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|d:\\handle_backend\\handle_backend\\controllers\\patientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3248A5F8-AE41-4693-AAC2-AF617B9CCC99}|handle_backend\\handle_backend.csproj|solutionrelative:handle_backend\\controllers\\patientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "PatientsController.cs",
+              "DocumentMoniker": "D:\\handle_backend\\handle_backend\\Controllers\\PatientsController.cs",
+              "RelativeDocumentMoniker": "handle_backend\\Controllers\\PatientsController.cs",
+              "ToolTip": "D:\\handle_backend\\handle_backend\\Controllers\\PatientsController.cs",
+              "RelativeToolTip": "handle_backend\\Controllers\\PatientsController.cs",
+              "ViewState": "AgIAADMAAAAAAAAAAAAYwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-10T02:07:56.418Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "HandleXML.cs",
+              "DocumentMoniker": "D:\\handle_backend\\handle_backend\\Services\\HandleXML.cs",
+              "RelativeDocumentMoniker": "handle_backend\\Services\\HandleXML.cs",
+              "ToolTip": "D:\\handle_backend\\handle_backend\\Services\\HandleXML.cs",
+              "RelativeToolTip": "handle_backend\\Services\\HandleXML.cs",
+              "ViewState": "AgIAAGwAAAAAAAAAAAAiwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-10T02:07:59.555Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "handle_backend.http",
+              "DocumentMoniker": "D:\\handle_backend\\handle_backend\\handle_backend.http",
+              "RelativeDocumentMoniker": "handle_backend\\handle_backend.http",
+              "ToolTip": "D:\\handle_backend\\handle_backend\\handle_backend.http",
+              "RelativeToolTip": "handle_backend\\handle_backend.http",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
+              "WhenOpened": "2025-10-10T02:07:49.856Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
