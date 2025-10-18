@@ -1,4 +1,5 @@
 using handle_backend.Services;
+using handle_backend.Services.XML;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,13 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSingleton<HandleXML>();
+// Program.cs
+builder.Services.AddSingleton<IFileWatcherService, FileWatcherService>();
 var app = builder.Build();
+
+using var scope = app.Services.CreateScope();
+var watcher = scope.ServiceProvider.GetRequiredService<IFileWatcherService>();
+await watcher.StartAsync();
 
 if (app.Environment.IsDevelopment())
 {
@@ -35,7 +42,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-// The ENC0118 diagnostic is informational and relates to Edit and Continue (Hot Reload) in Visual Studio.
-// It means changes to top-level statements (like those in Program.cs) require an application restart to take effect.
-// No code change is required to fix the error itself. To resolve the issue during development, simply restart the application after making changes to this file.

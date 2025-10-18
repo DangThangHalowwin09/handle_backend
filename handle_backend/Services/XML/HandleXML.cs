@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace handle_backend.Services
+namespace handle_backend.Services.XML
 {
     public class HandleXML
     {
@@ -301,7 +301,23 @@ namespace handle_backend.Services
             string ngaythanhtoan = "";
             //string sql = "";
             XmlNodeList nodeYL2 = xmlDoc.SelectNodes("//TONG_HOP");
+
+            string maBN_string = "";
+            string tenBN_string = "";
+            if (nodeYL2 != null && nodeYL2.Count > 0)
+            {
+                foreach (XmlNode chiTietNode in nodeYL2)
+                {
+                    XmlNode mabn = chiTietNode.SelectSingleNode("//MA_BN");
+                    XmlNode hotenbn = chiTietNode.SelectSingleNode("//HO_TEN");
+                    maBN_string = mabn.InnerText;
+                    tenBN_string = hotenbn.InnerText;
+                }
+            }
+
            
+            Console.WriteLine($"Check ho so MaBN: {maBN_string} TenBN: {tenBN_string} đang loi: {getError} ");
+            
 
             if (strNode == "XML1")
             {
@@ -409,6 +425,7 @@ namespace handle_backend.Services
                         }
                     }
                 }
+              
             }
             if (strNode == "XML2")
             {
@@ -992,32 +1009,7 @@ namespace handle_backend.Services
                     }
                 }
             }
-
-            String maBN_string = "";
-            String tenBN_string = "";
-            if (nodeYL2 != null && nodeYL2.Count > 0)
-            {
-                foreach (XmlNode chiTietNode in nodeYL2)
-                {
-                    XmlNode mabn = chiTietNode.SelectSingleNode("//MA_BN");
-                    XmlNode hotenbn = chiTietNode.SelectSingleNode("//HO_TEN");
-                    maBN_string = mabn.InnerText;
-                    tenBN_string = hotenbn.InnerText;
-                }
-            }
-
-            if (getError != null || getError != "" || getError != " ")
-
-            {
-                Console.WriteLine($"Ho so MaBN: {maBN_string} TenBN: {tenBN_string} đang loi: {getError} ");
-            }
-            else
-            {
-                Console.WriteLine($"Ho so MaBN: {maBN_string} TenBN: {tenBN_string} khong bi loi");
-            }
-                
-         
+            Console.WriteLine($" Tại XML {strNode} đang có lỗi: {getError} ");
         }
-
     }
 }
