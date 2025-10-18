@@ -1,110 +1,118 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using handle_backend.Services;
 
 [ApiController]
 [Route("api/[controller]")]
 public class PatientsController : ControllerBase
 {
-    private static FileInfo _latestFile;   // lưu file mới nhất
-    private static readonly object _lock = new(); // tránh race condition
-    private static FileSystemWatcher _watcher; // watcher theo dõi folder có file mới không
-
-    private readonly string folderPath = @"D:\XML_Data\QuyetDinh_4750_2023_HSKCB"; // đường dẫn tới folder chứa file XML
-
-    // constructor: khởi tạo chỉ có duy nhất một watcher 
-    public PatientsController()
+    private static FileSystemWatcher _watcher = null!;
+    private static readonly BlockingCollection<string> _fileQueue = new();
+    private static readonly CancellationTokenSource _cts = new();
+    private static readonly object _lock = new();
+    private readonly string folderPath = @"D:\XML_Data\QuyetDinh_4750_2023_HSKCB";
+    private readonly HandleXML _handleXML;
+    // --- Constructor ---
+    public PatientsController(HandleXML handleXML)
     {
+        _handleXML = handleXML;
         if (_watcher == null)
         {
-            _watcher = new FileSystemWatcher(folderPath, "*.xml");
-            _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite;
-            _watcher.Created += OnChanged;
+            // Khởi tạo watcher 1 lần duy nhất
+            _watcher = new FileSystemWatcher(folderPath, "*.xml")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                IncludeSubdirectories = false
+            };
 
-            _watcher.Changed += OnChanged;
+            _watcher.Created += OnFileCreatedOrChanged;
+            _watcher.Changed += OnFileCreatedOrChanged;
             _watcher.EnableRaisingEvents = true;
 
-            // khi start lần đầu → quét lấy file mới nhất sẵn
-            LoadLatestFile();
+            // ✅ Khi khởi động: xử lý tất cả file sẵn có
+            foreach (var file in Directory.GetFiles(folderPath, "*.xml"))
+            {
+                _fileQueue.Add(file);
+            }
+
+            // ✅ Bắt đầu background task xử lý file trong hàng đợi
+            Task.Run(() => ProcessQueue(_cts.Token));
         }
     }
-    // hàm kiểm tra có file mới không
-    private void OnChanged(object sender, FileSystemEventArgs e)
+
+    // --- Sự kiện khi có file mới hoặc bị ghi đè ---
+    private async void OnFileCreatedOrChanged(object sender, FileSystemEventArgs e)
     {
-        lock (_lock)
+        try
+        {
+            // Chờ file được ghi xong (tránh đọc khi đang ghi)
+            await Task.Delay(500);
+
+            if (System.IO.File.Exists(e.FullPath))
+            {
+                _fileQueue.Add(e.FullPath);
+            }
+        }
+        catch
+        {
+            // Bỏ qua lỗi nhỏ khi file đang bị lock hoặc ghi chưa xong
+        }
+    }
+
+    // --- Xử lý các file trong hàng đợi ---
+    private void ProcessQueue(CancellationToken token)
+    {
+        foreach (var filePath in _fileQueue.GetConsumingEnumerable(token))
         {
             try
             {
-                // chờ file ghi xong
-                System.Threading.Thread.Sleep(500);
-                var fi = new FileInfo(e.FullPath);
-
-                // cập nhật nếu đây là file mới hơn
-                if (_latestFile == null || fi.LastWriteTime > _latestFile.LastWriteTime)
+                if (!System.IO.File.Exists(filePath))
+                    continue;
+                lock (_lock)
                 {
-                    _latestFile = fi;
+                   
+                    // Gọi hàm xử lý XML ở đây
+                    _handleXML.AnalysXML130(filePath);
                 }
+                
+                // Xóa sau khi xử lý xong
+               // System.IO.File.Delete(filePath);
+
+
+                Console.WriteLine($"Đã xử lý & xóa file: {Path.GetFileName(filePath)}");
             }
-            catch { /* bỏ qua lỗi file đang bị lock */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi xử lý file {filePath}: {ex.Message}");
+            }
         }
     }
 
-    private void LoadLatestFile()
+    [HttpGet("status")]
+    public IActionResult GetStatus()
     {
-        var files = Directory.GetFiles(folderPath, "*.xml");
-        if (files.Length > 0)
+        var files = Directory.GetFiles(folderPath, "*.xml").Length;
+        return Ok(new
         {
-            _latestFile = files
-                .Select(f => new FileInfo(f))
-                .OrderByDescending(f => f.LastWriteTime)
-                .First();
-        }
+            message = "🩺 Hệ thống theo dõi XML đang chạy",
+            pendingFiles = files,
+            queueCount = _fileQueue.Count
+        });
     }
 
-    [HttpGet("latest")]
-    public IActionResult GetLatest()
+    // --- Dừng hệ thống (nếu cần) ---
+    [HttpPost("stop")]
+    public IActionResult Stop()
     {
-        lock (_lock)
-        {
-            if (_latestFile == null)
-               return  NotFound(new { error = "❌ Chưa có file XML nào" });
-
-            try
-            {
-                XDocument doc = XDocument.Load(_latestFile.FullName);
-
-                XNamespace ns = doc.Root?.GetDefaultNamespace() ?? "";
-                var tongHop = doc.Descendants("TONG_HOP").FirstOrDefault()
-                             ?? doc.Descendants(ns + "TONG_HOP").FirstOrDefault();
-
-                if (tongHop == null)
-                    return  BadRequest(new { error = "❌ Không tìm thấy <TONG_HOP> trong file XML" });
-
-                var patient = new
-                {
-                    MaBN = (string)(tongHop.Element("MA_BN") ?? tongHop.Element(ns + "MA_BN")) ?? "N/A",
-                    HoTenBN = (string)(tongHop.Element("HO_TEN") ?? tongHop.Element(ns + "HO_TEN")) ?? "N/A",
-                    NgaySinh = (string)(tongHop.Element("NGAY_SINH") ?? tongHop.Element(ns + "NGAY_SINH")) ?? "N/A"
-                };
-
-                return  Ok(new
-                {
-                    filename = _latestFile.Name,
-                    lastModified = _latestFile.LastWriteTime,
-                    patient
-                });
-            }
-            catch (IOException ioEx)
-            {
-                return  StatusCode(500, new { error = $"❌ Lỗi IO: {ioEx.Message}" });
-            }
-            catch (System.Exception ex)
-
-
-            {
-                return  StatusCode(500, new { error = $"❌ Lỗi xử lý: {ex.Message}" });
-            }
-        }
+        _cts.Cancel();
+        _watcher.EnableRaisingEvents = false;
+        _watcher.Dispose();
+        _fileQueue.CompleteAdding();
+        return Ok(new { message = "🛑 Đã dừng theo dõi folder." });
     }
 }

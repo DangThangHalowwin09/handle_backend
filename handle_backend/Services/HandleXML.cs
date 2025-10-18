@@ -1,27 +1,137 @@
 ﻿using System;
-using System.IO;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
+using System.Data.SqlTypes;
+using System.Diagnostics;
 //using Npgsql;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Data.SqlClient;
-using System.Collections;
-using System.Data.SqlTypes;
 using System.Xml;
-using System.Globalization;
-using System.Text.RegularExpressions;
-using System.Diagnostics;
+using System.Xml.Linq;
 
 namespace handle_backend.Services
 {
     public class HandleXML
     {
-        static string CleanInput(string input)
+        public static bool IsBase64String(string s)
+        {
+            s = s.Trim();
+            if (s.Length % 4 != 0) return false;
+            try
+            {
+                Convert.FromBase64String(s);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+        public void AnalysXML130(string fileName)
+        {
+            Console.WriteLine($"🔍 Bat dau check file: {fileName}");
+
+            try
+            {
+                if (!File.Exists(fileName))
+                {
+                    Console.WriteLine($"⚠️ File không tồn tại: {fileName}");
+                    return;
+                }
+
+                // Đọc XML bằng LINQ to XML
+                XDocument doc = XDocument.Load(fileName);
+
+                var fileHosos = doc.Descendants("FILEHOSO").ToList();
+                var nodeYL1 = doc.Descendants("HOSO").FirstOrDefault();
+
+                if (!fileHosos.Any())
+                {
+                    Console.WriteLine($"⚠️ Không tìm thấy thẻ <FILEHOSO> trong {fileName}");
+                    return;
+                }
+
+                if (nodeYL1 == null)
+                {
+                    Console.WriteLine($"⚠️ Không tìm thấy thẻ <HOSO> trong {fileName}");
+                    return;
+                }
+
+                // Kiểm tra FILEHOSO đầu tiên
+                var first = fileHosos.First();
+                var firstValue = first.Elements().Skip(1).FirstOrDefault()?.Value?.Trim() ?? "";
+
+                if (string.IsNullOrEmpty(firstValue))
+                {
+                    Console.WriteLine($"⚠️ FILEHOSO đầu tiên trong {fileName} không có nội dung");
+                    return;
+                }
+
+                // Trường hợp 1: Base64
+                if (IsBase64String(firstValue))
+                {
+                    foreach (var f in fileHosos)
+                    {
+                        var loai = f.Elements().FirstOrDefault()?.Value?.Trim() ?? "(Không có loại)";
+                        var base64Content = f.Elements().Skip(1).FirstOrDefault()?.Value?.Trim();
+
+                        if (string.IsNullOrEmpty(base64Content))
+                            continue;
+
+                        try
+                        {
+                            byte[] data = Convert.FromBase64String(base64Content);
+                            string decodedString = Encoding.UTF8.GetString(data);
+                            SaveAndCheck(loai, decodedString);
+                        }
+                        catch (FormatException)
+                        {
+                            Console.WriteLine($"⚠️ Lỗi Base64 không hợp lệ trong file: {fileName}");
+                        }
+                    }
+                }
+                // Trường hợp 2: Không phải Base64
+                else
+                {
+                    var decodedString2 = nodeYL1.ToString(SaveOptions.DisableFormatting);
+                    var fileHosoList = nodeYL1.Elements("FILEHOSO").ToList();
+
+                    if (!fileHosoList.Any())
+                    {
+                        Console.WriteLine($"⚠️ Không tìm thấy FILEHOSO trong {fileName}");
+                        return;
+                    }
+
+                    foreach (var fileHoso in fileHosoList)
+                    {
+                        var loai = fileHoso.Element("LOAIHOSO")?.Value?.Trim() ?? "(Không có loại hồ sơ)";
+                        SaveAndCheck(loai, decodedString2);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"❌ Lỗi xử lý file {fileName}: {e.Message}");
+            }
+            finally
+            {
+                Console.WriteLine($"✅ Đã check xong file {fileName}");
+            }
+        }
+
+        // Xử lý dữ liệu đầu vào trước khi xử lý
+        static string CleanInput(string input) 
         {
             input = input.Trim();
 
@@ -129,7 +239,7 @@ namespace handle_backend.Services
             // Kiểm tra nếu một trong hai chuỗi rỗng hoặc null
             if (string.IsNullOrWhiteSpace(Datetime1) || string.IsNullOrWhiteSpace(Datetime2))
             {
-                getError +=  false;
+               // getError +=  false;
             }
 
             // Khai báo định dạng
@@ -176,18 +286,23 @@ namespace handle_backend.Services
             return ketqua;
         }
 
-        string getError = "";
+        
         private void SaveAndCheck(string strNode, string decodedString)
         {
+            string getError = "";
             string mattdv = "2997032342";
             int soluongValue = 0;
             XmlDocument xmlDoc = new XmlDocument();
+            XDocument xdoc = XDocument.Parse(decodedString);
             xmlDoc.LoadXml(decodedString);
             XmlNode malk = xmlDoc.SelectSingleNode("//MA_LK");
             string ngay_vv = "";
             string ngay_rv = "";
             string ngaythanhtoan = "";
             //string sql = "";
+            XmlNodeList nodeYL2 = xmlDoc.SelectNodes("//TONG_HOP");
+           
+
             if (strNode == "XML1")
             {
                 XmlNodeList nodeYL = xmlDoc.SelectNodes("//TONG_HOP");
@@ -205,10 +320,7 @@ namespace handle_backend.Services
                         XmlNode mathebhyt = chiTietNode.SelectSingleNode("//MA_THE_BHYT");
                         XmlNode ngayvaonoitru = chiTietNode.SelectSingleNode("//NGAY_VAO_NOI_TRU");
                         XmlNode ngayttoan = chiTietNode.SelectSingleNode("//NGAY_TTOAN");
-                        XmlNode ma_ttdv = 
-                            
-                            
-                            chiTietNode.SelectSingleNode("//MA_TTDV");
+                        XmlNode ma_ttdv = chiTietNode.SelectSingleNode("//MA_TTDV");
                         XmlNode namqt = chiTietNode.SelectSingleNode("//NAM_QT");
                         XmlNode thangqt = chiTietNode.SelectSingleNode("//THANG_QT");
                         XmlNode maloaikcb = chiTietNode.SelectSingleNode("//MA_LOAI_KCB");
@@ -229,7 +341,7 @@ namespace handle_backend.Services
                         ngay_rv = ngayra.InnerText.Trim();
                         ngay_vv = ngayvao.InnerText.Trim();
                         ngaythanhtoan = ngayttoan.InnerText.Trim();
-                       getError +=  "Hồ sơ Bệnh nhân: " + hotenbn.InnerText + " - " + malk.InnerText + " - " + mabn.InnerText + " - " + MA_NGHE_NGHIEP.InnerText + " \n ";
+                       //getError +=  "Hồ sơ Bệnh nhân: " + hotenbn.InnerText + " - " + malk.InnerText + " - " + mabn.InnerText + " - " + MA_NGHE_NGHIEP.InnerText + " \n ";
                         if (lydovv != null && lydovv.InnerText == "")
                         {
                            getError +=  "Trường LY_DO_VV không được để trống" + "\n";
@@ -880,6 +992,31 @@ namespace handle_backend.Services
                     }
                 }
             }
+
+            String maBN_string = "";
+            String tenBN_string = "";
+            if (nodeYL2 != null && nodeYL2.Count > 0)
+            {
+                foreach (XmlNode chiTietNode in nodeYL2)
+                {
+                    XmlNode mabn = chiTietNode.SelectSingleNode("//MA_BN");
+                    XmlNode hotenbn = chiTietNode.SelectSingleNode("//HO_TEN");
+                    maBN_string = mabn.InnerText;
+                    tenBN_string = hotenbn.InnerText;
+                }
+            }
+
+            if (getError != null || getError != "" || getError != " ")
+
+            {
+                Console.WriteLine($"Ho so MaBN: {maBN_string} TenBN: {tenBN_string} đang loi: {getError} ");
+            }
+            else
+            {
+                Console.WriteLine($"Ho so MaBN: {maBN_string} TenBN: {tenBN_string} khong bi loi");
+            }
+                
+         
         }
 
     }
