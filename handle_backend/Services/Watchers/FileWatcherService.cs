@@ -134,11 +134,11 @@ namespace handle_backend.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"❌ Error: {filePath}");
+                    _logger.LogError(ex, $"❌ Error processing file: {filePath}");
                 }
             }
         }
-
+  
         private void RetryDelete(string filePath)
         {
             for (int i = 0; i < 3; i++)
