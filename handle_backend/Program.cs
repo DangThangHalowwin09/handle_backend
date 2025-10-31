@@ -1,4 +1,5 @@
 using handle_backend.Services;
+using handle_backend.Services.Firebase;
 using handle_backend.Services.XML;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<HandleXML>();
 // Program.cs
 builder.Services.AddSingleton<IFileWatcherService, FileWatcherService>();
+builder.Services.AddSingleton<FirebaseService>();
+
 var app = builder.Build();
 
 using var scope = app.Services.CreateScope();

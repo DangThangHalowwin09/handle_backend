@@ -1,4 +1,5 @@
-﻿using System;
+﻿using handle_backend.Services.Firebase;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,7 +7,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Diagnostics;
-//using Npgsql;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -20,8 +20,15 @@ using System.Xml.Linq;
 
 namespace handle_backend.Services.XML
 {
+  
     public class HandleXML
     {
+        private readonly FirebaseService _firebase;
+
+        public HandleXML(FirebaseService firebase)
+        {
+            _firebase = firebase;
+        }
         public static bool IsBase64String(string s)
         {
             s = s.Trim();
@@ -40,7 +47,7 @@ namespace handle_backend.Services.XML
 
         public void AnalysXML130(string fileName)
         {
-            Console.WriteLine($"🔍 Bắt đầu check file: {fileName}");
+            //Console.WriteLine($"🔍 Bắt đầu check file: {fileName}");
 
             try
             {
@@ -139,7 +146,10 @@ namespace handle_backend.Services.XML
             {
                 var grouped = errors
                 .GroupBy(e => e)
-                .Select(g => $"{g.Key} ({g.Count()} lần)")
+                .Select(g => $"{g.Key} ({g.Count()} " +
+                $"" +
+                $"" +
+                $"lần)")
                 .ToList();
 
                 Console.WriteLine($"Hồ sơ bệnh nhân {patientName} mã bệnh nhân {patientId} có {errors.Count} lỗi trong {xmlType}: ");
@@ -147,8 +157,11 @@ namespace handle_backend.Services.XML
                 {
                     Console.WriteLine($" - {err}");
                 }
+
+
                 //string errorList = string.Join("", errors);
-               
+                string errorText = string.Join("; ", grouped);
+                _ = _firebase.AddError_BHYT(patientName, patientId, $"[{xmlType}] {errorText}");
 
             }
             else
@@ -230,22 +243,19 @@ namespace handle_backend.Services.XML
         }
         public bool SosanhTime(string Datetime1, string Datetime2, int sophut)
         {
-            DateTime time1, time2;
-
-            // Kiểm tra và chuyển đổi định dạng
-            bool isValid1 = DateTime.TryParseExact(Datetime1, "yyyyMMddHHmm", null, DateTimeStyles.None, out time1);
-            bool isValid2 = DateTime.TryParseExact(Datetime2, "yyyyMMddHHmm", null, DateTimeStyles.None, out time2);
-
-            if (!isValid1 || !isValid2)
-            {
-                // Không đúng định dạng
+            if (string.IsNullOrWhiteSpace(Datetime1) || string.IsNullOrWhiteSpace(Datetime2))
                 return false;
-            }
 
-            TimeSpan chenhLech = (time1 - time2).Duration(); // khoảng cách tuyệt đối
-            return chenhLech < TimeSpan.FromMinutes(sophut);
+            const string format = "yyyyMMddHHmm";
+            if (!DateTime.TryParseExact(Datetime1, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime time1))
+                return false;
+            if (!DateTime.TryParseExact(Datetime2, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime time2))
+                return false;
 
+            TimeSpan chenhLech = (time1 - time2).Duration();
+            return chenhLech <= TimeSpan.FromMinutes(sophut); // dùng <= nếu muốn cho phép bằng
         }
+
         public bool checkChar(string input)
         {
             foreach (char c in input)
@@ -263,38 +273,18 @@ namespace handle_backend.Services.XML
 
         public bool SosanhTime2(string Datetime1, string Datetime2)
         {
-            // Kiểm tra nếu một trong hai chuỗi rỗng hoặc null
             if (string.IsNullOrWhiteSpace(Datetime1) || string.IsNullOrWhiteSpace(Datetime2))
-            {
-                // errors.Add(  false;
-            }
-
-            // Khai báo định dạng
-            string format = "yyyyMMddHHmm";
-            DateTime time1, time2;
-
-            // Dùng TryParseExact để kiểm tra định dạng và parse an toàn
-            bool isValidTime1 = DateTime.TryParseExact(Datetime1, format,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None, out time1);
-
-            bool isValidTime2 = DateTime.TryParseExact(Datetime2, format,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None, out time2);
-
-            // Nếu không đúng định dạng thì báo lỗi
-            if (!isValidTime1 || !isValidTime2)
-            {
                 return false;
-            }
-            if (time1 <= time2)
-            {
-                return true;
-            }
-            else
-            {
+
+            const string format = "yyyyMMddHHmm";
+
+            if (!DateTime.TryParseExact(Datetime1, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime time1))
                 return false;
-            }
+
+            if (!DateTime.TryParseExact(Datetime2, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime time2))
+                return false;
+
+            return time1 <= time2;
         }
 
 
@@ -318,7 +308,9 @@ namespace handle_backend.Services.XML
             List<string> errors = new List<string>();
             string maBN_string = "";
             string tenBN_string = "";
-            string mattdv = "2997032342";
+
+            string mattdv_thayHung = "3096009023";
+            string mattdv_thayTrung = "2997032342";
             int soluongValue = 0;
             string ngay_vv = "";
             string ngay_rv = "";
@@ -384,8 +376,8 @@ namespace handle_backend.Services.XML
 
                             if (lydovv != null && string.IsNullOrWhiteSpace(lydovv.InnerText))
                                 errors.Add("Trường LY_DO_VV không được để trống" + "\n");
-                            if (ppdieutri != null && string.IsNullOrWhiteSpace(ppdieutri.InnerText))
-                                errors.Add("Trường PP_DIEU_TRI không được để trống" + "\n");
+                            /*if (ppdieutri != null && string.IsNullOrWhiteSpace(ppdieutri.InnerText))
+                                errors.Add("Trường PP_DIEU_TRI không được để trống" + "\n");*/
                             if (mabenhchinh != null && string.IsNullOrWhiteSpace(mabenhchinh.InnerText))
                                 errors.Add("Trường mã bệnh chính MA_BENH_CHINH không được để trống" + "\n");
                             if (chandoanvv != null && string.IsNullOrWhiteSpace(chandoanvv.InnerText))
@@ -405,20 +397,19 @@ namespace handle_backend.Services.XML
                             if (ngayttoan != null && ngayvao != null && !SosanhTime2(ngayvao.InnerText, ngayttoan.InnerText))
                                 errors.Add("Ngày thanh toán không được nhỏ hơn ngày vào viện" + "\n");
                             if (giatritu != null && giatriden != null && !SosanhTime2(giatritu.InnerText + "0000", giatriden.InnerText + "0000"))
-                                errors.Add("Hạn thẻ không đúng, đến ngày nhỏ hơn từ ngày" + "\n");
+                                errors.Add($"Trường hạn thẻ không đúng hoặc GT_THE_DEN {giatriden.InnerText} nhỏ hơn GT_THE_TU {giatritu.InnerText}" + "\n");
                             if (namqt != null && string.IsNullOrWhiteSpace(namqt.InnerText))
                                 errors.Add("Năm quyết toán không được để trống" + "\n");
                             if (thangqt != null && string.IsNullOrWhiteSpace(thangqt.InnerText))
                                 errors.Add("Tháng quyết toán không được để trống" + "\n");
                             if (socccd != null && !string.IsNullOrEmpty(socccd.InnerText) && !checkformat(socccd.InnerText, @"^\d{12}$"))
                                 errors.Add("Thẻ căn cước không đúng định dạng" + "\n");
-                            if (ma_ttdv != null && ma_ttdv.InnerText != mattdv)
+                            if (ma_ttdv != null && (ma_ttdv.InnerText != mattdv_thayHung && ma_ttdv.InnerText != mattdv_thayTrung))
                                 errors.Add("Thông tin MA_TTDV sai" + "\n");
                         }
                     }
                 }
-                // Similar updates for XML2, XML3, XML4, XML5, XML7, XML8, XML11, XML14
-                // For brevity, I'll show one more example (XML2). Apply similar changes to others.
+
                 if (strNode == "XML2")
                 {
                     XmlNodeList nodeYL = xmlDoc.SelectNodes("//CHI_TIET_THUOC");
@@ -787,7 +778,7 @@ namespace handle_backend.Services.XML
                             {
                                 errors.Add( "NGAY_RA không được để trống." + "\n");
                             }
-                            if (ma_ttdv != null && ma_ttdv.InnerText != mattdv)
+                            if (ma_ttdv != null && (ma_ttdv.InnerText != mattdv_thayHung && ma_ttdv.InnerText != mattdv_thayTrung))
                             {
                                 errors.Add( "Thông tin MA_TTDV sai." + "\n");
                             }
@@ -842,7 +833,7 @@ namespace handle_backend.Services.XML
                             {
                                 errors.Add( "NGAY_RA không được để trống." + "\n");
                             }
-                            if (ma_ttdv != null && ma_ttdv.InnerText != mattdv)
+                            if (ma_ttdv != null && (ma_ttdv.InnerText != mattdv_thayHung && ma_ttdv.InnerText != mattdv_thayTrung))
                             {
                                 errors.Add($"Thông tin MA_TTDV {ma_ttdv.InnerText} sai." + "\n");
                             }
@@ -882,7 +873,7 @@ namespace handle_backend.Services.XML
                             {
                                 errors.Add( "MA_BHXH không được để trống." + "\n");
                             }
-                            if (ma_ttdv != null && ma_ttdv.InnerText != mattdv)
+                            if (ma_ttdv != null && (ma_ttdv.InnerText != mattdv_thayHung && ma_ttdv.InnerText != mattdv_thayTrung))
                             {
                                 errors.Add($"Thông tin MA_TTDV {ma_ttdv.InnerText} sai." + "\n");
                             }
@@ -924,7 +915,7 @@ namespace handle_backend.Services.XML
                             {
                                 errors.Add( "NGAY_RA không được để trống." + "\n");
                             }
-                            if (ma_ttdv != null && ma_ttdv.InnerText != mattdv)
+                            if (ma_ttdv != null && (ma_ttdv.InnerText != mattdv_thayHung && ma_ttdv.InnerText != mattdv_thayTrung))
                             {
                                 errors.Add( $"Thông tin MA_TTDV {ma_ttdv.InnerText} sai." + "\n");
                             }
