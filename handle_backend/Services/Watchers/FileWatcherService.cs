@@ -7,7 +7,7 @@ namespace handle_backend.Services
 {
     public class FileWatcherService : IFileWatcherService, IDisposable
     {
-        private readonly string _folderPath = @"D:\XML_Data\QuyetDinh_4750_2023_HSKCB";
+        private readonly string _folderPath = @"D:\XML_Data\QuyetDinh_4750_2023_HSKCB"; //Thay đổi theo file cá nhân
         private readonly HandleXML _handleXML;
         private static readonly HashSet<string> _processedFiles = new();
         private BlockingCollection<string> _fileQueue = new();
