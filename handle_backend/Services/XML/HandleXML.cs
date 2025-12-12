@@ -1,4 +1,5 @@
 ﻿using handle_backend.Services.Firebase;
+using handle_backend.Services.XML.VTYT;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -518,6 +519,10 @@ namespace handle_backend.Services.XML
                                 MA_MAY != null && !string.IsNullOrWhiteSpace(MA_MAY.InnerText.Trim()) && MA_DICH_VU.InnerText.Trim() != "")
                             {
                                 errors.Add($"Sai thông tin {MA_MAY.InnerText} theo quy định." + "\n");
+                            }
+                            if(MA_MAY != null && !string.IsNullOrWhiteSpace(MA_MAY.InnerText.Trim()) && (Xuly_vtyt.KiemTraTonTai(MA_MAY.InnerText.Trim())))
+                            {
+                                errors.Add($"Mã máy {MA_MAY.InnerText} không tồn tại trong danh mục BHYT." + "\n");
                             }
                             if (soluong != null && int.TryParse(soluong.InnerText.Trim(), out soluongValue))
                             {
